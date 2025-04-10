@@ -14,6 +14,26 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum Role {
+  USER   // Locataire
+  OWNER  // Propriétaire
+}
+
+enum UserType {
+  PROFESSIONAL  // Loueur professionnel
+  INDIVIDUAL    // Particulier
+}
+
+model Address {
+  id            Int     @id @default(autoincrement())
+  street        String  // Rue
+  complement    String? // Complément d'adresse (optionnel)
+  postalCode    String  // Code postal
+  city          String  // Ville
+  country       String  // Pays
+  user          User []    
+}
+
 model User {
   id            String    @id
   email         String    @unique
@@ -24,6 +44,14 @@ model User {
   updatedAt     DateTime
   sessions      Session[]
   accounts      Account[]
+  dateOfBirth   DateTime
+  addressId     Int
+  address       Address @relation(fields: [addressId], references: [id])
+  userType      UserType
+  phone_number  Int
+  role          Role       // Rôle de l'utilisateur (Locataire ou Propriétaire)
+  bookings      Booking[]  // Réservations effectuées par l'utilisateur (si locataire)
+  cars          Car[]     // Voitures possédées par l'utilisateur (si propriétaire)
 
   @@map("user")
 }
@@ -71,4 +99,65 @@ model Verification {
   updatedAt  DateTime?
 
   @@map("verification")
+}
+
+
+model Car {
+  id              Int       @id @default(autoincrement())
+  model           String    // Modèle de la voiture (Ex : Toyota Prius)
+  type            String    // Type de voiture (Ex : SUV, Berline, etc.)
+  price           Float     // Prix de location par jour
+  description     String?   // Description de la voiture
+  images          String[]  // Liste d'URL d'images
+  plateNumber     String    // Plaque d'immatriculation de la voiture
+  country         String    // Pays d'immatriculation de la voiture
+  registrationYear Int      // Année d'immatriculation de la voiture
+  fuel            String
+  Kilometres      String
+  doorsNumber     Int
+  seatsNumber     Int
+  ownerId         String       // Référence vers le propriétaire
+  owner           User      @relation(fields: [ownerId], references: [id])  // Propriétaire de la voiture
+  locationId      Int       // Référence vers l'endroit où la voiture est disponible
+  location        Location @relation(fields: [locationId], references: [id])  // Lieu de disponibilité de la voiture
+  bookings        Booking[] // Réservations de la voiture
+  isMaintained    Boolean
+  availableDates   Availability[]  // Nouvelle relation pour les dates de disponibilité
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+}
+
+model Availability {
+  id        Int      @id @default(autoincrement())
+  startDate DateTime // Date de début de la période de disponibilité
+  endDate   DateTime // Date de fin de la période de disponibilité
+  status    String   // Statut de la disponibilité (disponible, réservé, en maintenance...)
+  carId     Int      // Référence à la voiture
+  car       Car      @relation(fields: [carId], references: [id])
+}
+
+model Location {
+  id            Int      @id @default(autoincrement())
+  street        String
+  complement    String?
+  postalCode    String
+  city          String
+  country       String
+  cars           Car []
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Booking {
+  id          Int      @id @default(autoincrement())
+  startDate   DateTime // Date de début de la réservation
+  endDate     DateTime // Date de fin de la réservation
+  status      String   // Statut de la réservation (par exemple: Confirmée, En attente, Terminée)
+  carId       Int      // Référence à la voiture réservée
+  userId      String      // Référence à l'utilisateur (locataire)
+  car         Car      @relation(fields: [carId], references: [id])  // La voiture réservée
+  user        User     @relation(fields: [userId], references: [id])  // L'utilisateur qui a fait la réservation
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
